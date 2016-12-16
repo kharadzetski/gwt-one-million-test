@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+	<changeSet id="001_001_00" author="kgorodetsky">
+		<sql>
+			SET FILES NIO SIZE 16384
+            SET FILES LOG FALSE
+		</sql>
+	</changeSet>
+
+	<changeSet id="001_001_01" author="kgorodetsky">
+		<createTable tableName="USERS">
+			<column name="ID" autoIncrement="true" type="BIGINT">
+				<constraints primaryKey="true" />
+			</column>
+			<column name="NAME" type="VARCHAR(10)">
+				<constraints nullable="false" />
+			</column>
+			<column name="SURNAME" type="VARCHAR(10)">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+		<createIndex tableName="USERS" indexName="NAME_IDX">
+			<column name="NAME"/>
+		</createIndex>
+		<createIndex tableName="USERS" indexName="SURNAME_IDX">
+			<column name="SURNAME"/>
+		</createIndex>
+		<rollback>
+			<dropTable tableName="USERS" />
+		</rollback>
+	</changeSet>
+
+	<changeSet id="001_001_02" author="kgorodetsky">
+		<createProcedure>
+			CREATE FUNCTION GENERATE_STR()
+			RETURNS VARCHAR(10)
+			LANGUAGE JAVA DETERMINISTIC NO SQL
+			EXTERNAL NAME
+			'CLASSPATH:com.example.shared.StringGenerate.generateStr'
+		</createProcedure>
+		<rollback>
+			<sql>
+				DROP FUNCTION GENERATE_STR;
+			</sql>
+		</rollback>
+	</changeSet>
+	<changeSet id="001_001_03" author="kgorodetsky">
+		<createProcedure>
+			CREATE PROCEDURE GENERATE_USERS(QUANTITY BIGINT)
+			MODIFIES SQL DATA
+			BEGIN ATOMIC
+			DECLARE i BIGINT;
+			SET i = QUANTITY;
+			DELETE FROM USERS;
+			loop_label: WHILE i > 0 DO
+			INSERT INTO USERS (NAME, surname) VALUES (GENERATE_STR(), GENERATE_STR());
+			SET i = i - 1;
+			END WHILE loop_label;
+			END;
+		</createProcedure>
+		<rollback>
+			<sql>
+				DROP FUNCTION GENERATE_USERS;
+			</sql>
+		</rollback>
+	</changeSet>
+	<changeSet id="001_001_04" author="kgorodetsky">
+		<sql>
+			CHECKPOINT;
+		</sql>
+	</changeSet>
+</databaseChangeLog>
